@@ -6,33 +6,16 @@
  */
 
 import React from 'react';
-import classNames from 'classnames';
-import withStyles from '@material-ui/core/styles/withStyles';
 import VolumeMuteIcon from '@material-ui/icons/VolumeMute';
 import VolumeDownIcon from '@material-ui/icons/VolumeDown';
 import VolumeUpIcon from '@material-ui/icons/VolumeUp';
 import VolumeOffIcon from '@material-ui/icons/VolumeOff';
 import IconButton from '@material-ui/core/IconButton';
 import Slider from '@material-ui/core/Slider';
-import { borderStyle } from '../Theme';
 import { PLAYER_VOLUME_NORMAL } from '../../Constants';
 import PlayerStore from '../../Stores/PlayerStore';
 import TdLibController from '../../Controllers/TdLibController';
 import './VolumeButton.css';
-
-const styles = theme => ({
-    iconButton: {
-        padding: 4
-    },
-    root: {
-        display: 'flex',
-        height: 100,
-        width: 28,
-        padding: '13px 0',
-        background: theme.palette.type === 'dark' ? theme.palette.background.default : '#FFFFFF'
-    },
-    ...borderStyle(theme)
-});
 
 class VolumeButton extends React.Component {
     state = {
@@ -163,7 +146,6 @@ class VolumeButton extends React.Component {
     };
 
     render() {
-        const { classes } = this.props;
         const { anchorEl, value } = this.state;
         const open = Boolean(anchorEl);
 
@@ -175,7 +157,7 @@ class VolumeButton extends React.Component {
                     position: 'relative',
                     background: 'transparent'
                 }}>
-                <IconButton className={classes.iconButton} color='primary' onClick={this.handleVoiceClick}>
+                <IconButton className='header-player-button' color='primary' onClick={this.handleVoiceClick}>
                     {this.getVolumeIcon(value)}
                 </IconButton>
                 <div
@@ -187,13 +169,7 @@ class VolumeButton extends React.Component {
                     }}
                     onMouseEnter={e => this.handleMouseEnter(e, false)}
                     onMouseLeave={this.handlePopupMouseLeave}>
-                    <div
-                        className={classNames(classes.borderColor, classes.root)}
-                        style={{
-                            marginTop: 8,
-                            borderWidth: 1,
-                            borderStyle: 'solid'
-                        }}>
+                    <div className='volume-button-panel'>
                         <Slider
                             min={0}
                             max={1}
@@ -211,4 +187,4 @@ class VolumeButton extends React.Component {
     }
 }
 
-export default withStyles(styles, { withTheme: true })(VolumeButton);
+export default VolumeButton;

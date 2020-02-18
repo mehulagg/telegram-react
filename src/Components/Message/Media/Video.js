@@ -8,7 +8,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
-import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import PlayArrowIcon from '../../../Assets/Icons/PlayArrow';
 import { getFitSize, getDurationString } from '../../../Utils/Common';
 import { getFileSize, getSrc } from '../../../Utils/File';
 import { isBlurredThumbnail } from '../../../Utils/Media';
@@ -40,7 +40,7 @@ class Video extends React.Component {
         const { displaySize, openMedia, title, caption, type, style } = this.props;
         const { minithumbnail, thumbnail, video, width, height, duration } = this.props.video;
 
-        const fitPhotoSize = getFitSize(thumbnail || { width: width, height: height }, displaySize);
+        const fitPhotoSize = getFitSize({ width, height } || thumbnail, displaySize);
         if (!fitPhotoSize) return null;
 
         const videoStyle = {

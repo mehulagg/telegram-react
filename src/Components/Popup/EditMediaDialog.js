@@ -7,9 +7,6 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import classNames from 'classnames';
-import { compose } from 'recompose';
-import withStyles from '@material-ui/core/styles/withStyles';
 import { withTranslation } from 'react-i18next';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
@@ -17,30 +14,14 @@ import DialogActions from '@material-ui/core/DialogActions';
 import EditIcon from '@material-ui/icons/Edit';
 import IconButton from '@material-ui/core/IconButton';
 import EditUrlDialog from './EditUrlDialog';
-import { borderStyle } from '../Theme';
 import { focusInput } from '../../Utils/DOM';
 import { getEntities, getMedia, getNodes } from '../../Utils/Message';
+import { readImageSize } from '../../Utils/Common';
 import FileStore from '../../Stores/FileStore';
 import MessageStore from '../../Stores/MessageStore';
 import TdLibController from '../../Controllers/TdLibController';
 import './EditMediaDialog.css';
-import { readImageSize } from '../../Utils/Common';
 
-const styles = theme => ({
-    ...borderStyle(theme),
-    editButton: {
-        position: 'absolute',
-        top: 30,
-        right: 30,
-        padding: 6,
-        color: 'white',
-        fontSize: 18,
-        background: 'rgba(0, 0, 0, 0.25)',
-        '&:hover': {
-            background: 'rgba(0, 0, 0, 0.25)'
-        }
-    }
-});
 class EditMediaDialog extends React.Component {
     constructor(props) {
         super(props);
@@ -56,7 +37,7 @@ class EditMediaDialog extends React.Component {
     }
 
     componentWillUnmount() {
-        document.removeEventListener('selectionchange', this.handleSelectionChange);
+        document.removeEventListener('selectionchange', this.handleSelectionChange, true);
     }
 
     handleSelectionChange = () => {
@@ -98,6 +79,7 @@ class EditMediaDialog extends React.Component {
     }
 
     setFormattedText(formattedText) {
+        const { t } = this.props;
         const element = this.captionRef.current;
 
         if (!formattedText) {
@@ -107,7 +89,7 @@ class EditMediaDialog extends React.Component {
 
         const { text, entities } = formattedText;
         try {
-            const nodes = getNodes(text, entities);
+            const nodes = getNodes(text, entities, t);
             element.innerHTML = null;
             nodes.forEach(x => {
                 element.appendChild(x);
@@ -493,12 +475,12 @@ class EditMediaDialog extends React.Component {
                 open={true}
                 onClose={this.handleCancel}
                 aria-labelledby='edit-media-dialog-title'>
-                <div className={classNames(classes.borderColor, 'edit-media-dialog-content')}>
+                <div className='edit-media-dialog-content'>
                     <div style={{ margin: 24 }}>{media}</div>
                     <IconButton
                         disableRipple={true}
                         aria-label={t('Edit')}
-                        className={classes.editButton}
+                        className='edit-media-dialog-edit-button'
                         size='small'
                         onClick={this.handleEditMedia}>
                         <EditIcon fontSize='inherit' />
@@ -547,9 +529,4 @@ EditMediaDialog.propTypes = {
     open: PropTypes.bool
 };
 
-const enhance = compose(
-    withStyles(styles, { withTheme: true }),
-    withTranslation()
-);
-
-export default enhance(EditMediaDialog);
+export default withTranslation()(EditMediaDialog);

@@ -6,29 +6,21 @@
  */
 
 import React from 'react';
-import withStyles from '@material-ui/core/styles/withStyles';
-import classNames from 'classnames';
 import Footer from './Footer';
-import NativeAppControl from './Additional/NativeAppControl';
-import { borderStyle } from './Theme';
-
-const styles = theme => ({
-    page: {
-        background: '#FFFFFF',
-        color: '#000000'
-    },
-    ...borderStyle(theme)
-});
+import NativeApp from './Additional/NativeApp';
 
 class NativeAppPage extends React.Component {
     render() {
-        const { classes } = this.props;
-
         return (
             <>
                 <div className='header-wrapper' />
-                <div className={classNames(classes.page, classes.borderColor, 'page')}>
-                    <NativeAppControl />
+                <div
+                    className='page'
+                    style={{
+                        background: '#FFFFFF',
+                        color: '#000000'
+                    }}>
+                    <NativeApp />
                 </div>
                 <Footer />
             </>
@@ -36,4 +28,4 @@ class NativeAppPage extends React.Component {
     }
 }
 
-export default withStyles(styles)(NativeAppPage);
+export default NativeAppPage;

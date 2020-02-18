@@ -28,7 +28,8 @@ import {
     getChatDisableMentionNotifications,
     getChatDisablePinnedMessageNotifications,
     getChatTitle,
-    isChatMuted
+    isChatMuted,
+    isMeChat
 } from './Chat';
 import { openUser } from './../Actions/Client';
 import { getPhotoSize } from './Common';
@@ -46,7 +47,69 @@ import UserStore from '../Stores/UserStore';
 import TdLibController from '../Controllers/TdLibController';
 import Call from '../Components/Message/Media/Call';
 
-function getAuthor(message) {
+export function isMetaBubble(chatId, messageId) {
+    const message = MessageStore.get(chatId, messageId);
+    if (!message) {
+        return false;
+    }
+
+    const { content } = message;
+    if (!content) {
+        return false;
+    }
+
+    const { caption } = content;
+    if (caption && caption.text && caption.text.length > 0) {
+        return false;
+    }
+
+    switch (content['@type']) {
+        case 'messageAnimation': {
+            return true;
+        }
+        case 'messageLocation': {
+            return true;
+        }
+        case 'messagePhoto': {
+            return true;
+        }
+        case 'messageSticker': {
+            return true;
+        }
+        case 'messageVideo': {
+            return true;
+        }
+        case 'messageVideoNote': {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function isMessageUnread(chatId, messageId) {
+    const chat = ChatStore.get(chatId);
+    if (!chat) {
+        return false;
+    }
+
+    const { last_read_inbox_message_id, last_read_outbox_message_id } = chat;
+
+    const message = MessageStore.get(chatId, messageId);
+    if (!message) {
+        return false;
+    }
+
+    const { id, is_outgoing } = message;
+    const isMe = isMeChat(chatId);
+    if (is_outgoing && isMe) {
+        return false;
+    }
+
+    return is_outgoing ? id > last_read_outbox_message_id : id > last_read_inbox_message_id;
+}
+
+function getAuthor(message, t = k => k) {
     if (!message) return null;
 
     const { forward_info } = message;
@@ -57,7 +120,7 @@ function getAuthor(message) {
                 if (forward_info.sender_user_id > 0) {
                     const user = UserStore.get(forward_info.sender_user_id);
                     if (user) {
-                        return getUserFullName(user);
+                        return getUserFullName(forward_info.sender_user_id, null, t);
                     }
                 }
                 break;
@@ -72,10 +135,10 @@ function getAuthor(message) {
         }
     }
 
-    return getTitle(message);
+    return getTitle(message, t);
 }
 
-function getTitle(message) {
+function getTitle(message, t = k => k) {
     if (!message) return null;
 
     const { sender_user_id, chat_id } = message;
@@ -83,7 +146,7 @@ function getTitle(message) {
     if (sender_user_id) {
         const user = UserStore.get(sender_user_id);
         if (user) {
-            return getUserFullName(user);
+            return getUserFullName(sender_user_id, null, t);
         }
     }
 
@@ -119,7 +182,7 @@ function searchCurrentChat(event, text) {
     searchChat(chatId, text);
 }
 
-function getFormattedText(formattedText) {
+function getFormattedText(formattedText, t = k => k) {
     if (formattedText['@type'] !== 'formattedText') return null;
 
     const { text, entities } = formattedText;
@@ -132,6 +195,11 @@ function getFormattedText(formattedText) {
     for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
         const { offset, length, type } = entity;
+
+        // skip nested entities
+        if (index > offset) {
+            continue;
+        }
 
         let textBefore = substring(text, index, offset);
         const textBeforeLength = textBefore.length;
@@ -204,9 +272,8 @@ function getFormattedText(formattedText) {
                 break;
             }
             case 'textEntityTypeMentionName': {
-                const user = UserStore.get(type.user_id);
                 result.push(
-                    <MentionLink key={entityKey} userId={type.user_id} title={getUserFullName(user)}>
+                    <MentionLink key={entityKey} userId={type.user_id} title={getUserFullName(type.user_id, null, t)}>
                         {entityText}
                     </MentionLink>
                 );
@@ -281,26 +348,26 @@ function getFormattedText(formattedText) {
     return result;
 }
 
-function getText(message) {
+function getText(message, meta, t = k => k) {
     if (!message) return null;
 
     let result = [];
 
     const { content } = message;
-    if (!content) return result;
+    if (!content) return [...result, meta];
 
     const { text, caption } = content;
 
     if (text && text['@type'] === 'formattedText' && text.text) {
-        result = getFormattedText(text);
+        result = getFormattedText(text, t);
     } else if (caption && caption['@type'] === 'formattedText' && caption.text) {
-        const formattedText = getFormattedText(caption);
+        const formattedText = getFormattedText(caption, t);
         if (formattedText) {
             result = result.concat(formattedText);
         }
     }
 
-    return result;
+    return result && result.length > 0 ? [...result, meta] : [];
 }
 
 function getWebPage(message) {
@@ -325,7 +392,7 @@ function getDateHint(date) {
     return dateFormat(d, 'H:MM:ss d.mm.yyyy'); //date.toDateString();
 }
 
-function getMedia(message, openMedia, hasTitle = false, hasCaption = false) {
+function getMedia(message, openMedia, hasTitle = false, hasCaption = false, inlineMeta = null) {
     if (!message) return null;
 
     const { chat_id, id, content } = message;
@@ -345,21 +412,54 @@ function getMedia(message, openMedia, hasTitle = false, hasCaption = false) {
                 />
             );
         case 'messageAudio':
-            return <Audio chatId={chat_id} messageId={id} audio={content.audio} openMedia={openMedia} />;
+            return (
+                <Audio
+                    title={hasTitle}
+                    caption={hasCaption}
+                    chatId={chat_id}
+                    messageId={id}
+                    audio={content.audio}
+                    openMedia={openMedia}
+                    meta={inlineMeta}
+                />
+            );
         case 'messageCall':
             return (
                 <Call
+                    title={hasTitle}
+                    caption={hasCaption}
                     chatId={chat_id}
                     messageId={id}
                     duraton={content.duration}
                     discardReason={content.discard_reason}
                     openMedia={openMedia}
+                    meta={inlineMeta}
                 />
             );
         case 'messageContact':
-            return <Contact chatId={chat_id} messageId={id} contact={content.contact} openMedia={openMedia} />;
+            return (
+                <Contact
+                    title={hasTitle}
+                    caption={hasCaption}
+                    chatId={chat_id}
+                    messageId={id}
+                    contact={content.contact}
+                    openMedia={openMedia}
+                    meta={inlineMeta}
+                />
+            );
         case 'messageDocument':
-            return <Document chatId={chat_id} messageId={id} document={content.document} openMedia={openMedia} />;
+            return (
+                <Document
+                    title={hasTitle}
+                    caption={hasCaption}
+                    chatId={chat_id}
+                    messageId={id}
+                    document={content.document}
+                    openMedia={openMedia}
+                    meta={inlineMeta}
+                />
+            );
         case 'messageGame':
             return <Game chatId={chat_id} messageId={id} game={content.game} openMedia={openMedia} />;
         case 'messageLocation':
@@ -387,7 +487,7 @@ function getMedia(message, openMedia, hasTitle = false, hasCaption = false) {
                 />
             );
         case 'messagePoll':
-            return <Poll chatId={chat_id} messageId={id} poll={content.poll} openMedia={openMedia} />;
+            return <Poll chatId={chat_id} messageId={id} poll={content.poll} openMedia={openMedia} meta={inlineMeta} />;
         case 'messageSticker':
             return (
                 <Sticker
@@ -410,6 +510,7 @@ function getMedia(message, openMedia, hasTitle = false, hasCaption = false) {
                     messageId={id}
                     venue={content.venue}
                     openMedia={openMedia}
+                    meta={inlineMeta}
                 />
             );
         case 'messageVideo':
@@ -446,10 +547,11 @@ function getMedia(message, openMedia, hasTitle = false, hasCaption = false) {
                     messageId={id}
                     voiceNote={content.voice_note}
                     openMedia={openMedia}
+                    meta={inlineMeta}
                 />
             );
         default:
-            return '[' + content['@type'] + ']';
+            return [`[${content['@type']}]`, inlineMeta];
     }
 }
 
@@ -484,8 +586,7 @@ function getForwardTitle(forwardInfo, t = key => key) {
         case 'messageForwardOriginUser': {
             const { sender_user_id } = origin;
 
-            const user = UserStore.get(sender_user_id);
-            return getUserFullName(user);
+            return getUserFullName(sender_user_id, null, t);
         }
         case 'messageForwardOriginHiddenUser': {
             const { sender_name } = origin;
@@ -804,7 +905,7 @@ function isContentOpened(chatId, messageId) {
     }
 }
 
-function getMediaTitle(message) {
+function getMediaTitle(message, t = k => k) {
     if (!message) return null;
 
     const { content } = message;
@@ -830,7 +931,7 @@ function getMediaTitle(message) {
         }
     }
 
-    return getAuthor(message);
+    return getAuthor(message, t);
 }
 
 function hasAudio(chatId, messageId) {
@@ -1088,7 +1189,7 @@ function openContact(contact, message, fileCancel) {
         message_id: id
     });
 
-    openUser(contact.userId);
+    openUser(contact.user_id, true);
 }
 
 function openDocument(document, message, fileCancel) {
@@ -1850,7 +1951,7 @@ function addTextNode(offset, length, text, nodes) {
     nodes.push(node);
 }
 
-export function getNodes(text, entities) {
+export function getNodes(text, entities, t = k => k) {
     if (!text) return [];
 
     entities = (entities || []).sort((a, b) => {
@@ -1916,7 +2017,7 @@ export function getNodes(text, entities) {
                         if (user) {
                             const node = document.createElement('a');
                             // node.href = getDecodedUrl(url, false);
-                            node.title = getUserFullName(user);
+                            node.title = getUserFullName(user_id, null, t);
                             // node.target = '_blank';
                             // node.rel = 'noopener noreferrer';
                             node.dataset.userId = user_id;
@@ -2341,6 +2442,36 @@ export function isMessagePinned(chatId, messageId) {
     if (!chat) return false;
 
     return chat.pinned_message_id === messageId;
+}
+
+export function canMessageBeUnvoted(chatId, messageId) {
+    const message = MessageStore.get(chatId, messageId);
+    if (!message) return false;
+
+    const { content } = message;
+    if (!content) return;
+    if (content['@type'] !== 'messagePoll') return;
+
+    const { poll } = content;
+    if (!poll) return false;
+
+    const { type, is_closed, options } = poll;
+    if (!type) return false;
+    if (type['@type'] !== 'pollTypeRegular') return false;
+    if (is_closed) return false;
+
+    return options.some(x => x.is_chosen || x.is_being_chosen);
+}
+
+export function canMessageBeClosed(chatId, messageId) {
+    const message = MessageStore.get(chatId, messageId);
+    if (!message) return false;
+
+    const { content, can_be_edited } = message;
+    if (!content) return;
+    if (content['@type'] !== 'messagePoll') return;
+
+    return can_be_edited;
 }
 
 export {

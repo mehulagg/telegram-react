@@ -7,20 +7,12 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import { compose } from 'recompose';
-import withStyles from '@material-ui/core/styles/withStyles';
 import { withTranslation } from 'react-i18next';
-import {
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Button,
-    IconButton
-} from '@material-ui/core';
+import { withRestoreRef, withSaveRef, compose } from '../../Utils/HOC';
+import { IconButton } from '@material-ui/core';
+import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import SearchIcon from '@material-ui/icons/Search';
-import CloseIcon from '@material-ui/icons/Close';
+import CloseIcon from '../../Assets/Icons/Close';
 import SpeedDialIcon from '@material-ui/lab/SpeedDialIcon';
 import MainMenuButton from './MainMenuButton';
 import { isAuthorizationReady } from '../../Utils/Common';
@@ -28,16 +20,7 @@ import { ANIMATION_DURATION_100MS } from '../../Constants';
 import AppStore from '../../Stores/ApplicationStore';
 import TdLibController from '../../Controllers/TdLibController';
 import '../ColumnMiddle/Header.css';
-import { withRestoreRef, withSaveRef } from '../../Utils/HOC';
-
-const styles = {
-    headerIconButton: {
-        margin: '8px 12px 8px 0'
-    },
-    dialogText: {
-        whiteSpace: 'pre-wrap'
-    }
-};
+import SettingsMenuButton from './Settings/SettingsMenuButton';
 
 class DialogsHeader extends React.Component {
     constructor(props) {
@@ -102,15 +85,6 @@ class DialogsHeader extends React.Component {
         this.setState({ open: true });
     };
 
-    handleDone = () => {
-        this.handleClose();
-        TdLibController.logOut();
-    };
-
-    handleClose = () => {
-        this.setState({ open: false });
-    };
-
     handleSearch = () => {
         const { onSearch, openSearch } = this.props;
         const { authorizationState } = this.state;
@@ -148,59 +122,122 @@ class DialogsHeader extends React.Component {
         }
     };
 
-    render() {
-        const { classes, onClick, openSearch, t } = this.props;
-        const { open } = this.state;
+    handleCloseArchive = () => {
+        TdLibController.clientUpdate({
+            '@type': 'clientUpdateCloseArchive'
+        });
+    };
 
-        const confirmLogoutDialog = open ? (
-            <Dialog transitionDuration={0} open={open} onClose={this.handleClose} aria-labelledby='form-dialog-title'>
-                <DialogTitle id='form-dialog-title'>{t('Confirm')}</DialogTitle>
-                <DialogContent>
-                    <DialogContentText className={classes.dialogText}>{t('AreYouSureLogout')}</DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={this.handleClose} color='primary'>
-                        {t('Cancel')}
-                    </Button>
-                    <Button onClick={this.handleDone} color='primary'>
-                        {t('Ok')}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        ) : null;
+    handleCloseSettings = () => {
+        TdLibController.clientUpdate({
+            '@type': 'clientUpdateCloseSettings'
+        });
+    };
+
+    handleCloseEditProfile = () => {
+        TdLibController.clientUpdate({
+            '@type': 'clientUpdateCloseEditProfile'
+        });
+    };
+
+    handleCloseNotifications = () => {
+        TdLibController.clientUpdate({
+            '@type': 'clientUpdateCloseNotifications'
+        });
+    };
+
+    render() {
+        const { onClick, openArchive, openSearch, openSettings, openEditProfile, openNotifications, t } = this.props;
+
+        let content = null;
+        let showRightButton = true;
+        if (openSearch) {
+            content = (
+                <>
+                    <div className='header-search-input grow'>
+                        <div
+                            id='header-search-inputbox'
+                            ref={this.searchInputRef}
+                            placeholder={t('Search')}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onKeyDown={this.handleKeyDown}
+                            onKeyUp={this.handleKeyUp}
+                            onPaste={this.handlePaste}
+                        />
+                    </div>
+                </>
+            );
+        } else if (openArchive) {
+            content = (
+                <>
+                    <IconButton className='header-left-button' onClick={this.handleCloseArchive}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <div className='header-status grow cursor-pointer' onClick={onClick}>
+                        <span className='header-status-content'>{t('ArchivedChats')}</span>
+                    </div>
+                </>
+            );
+        } else if (openEditProfile) {
+            showRightButton = false;
+            content = (
+                <>
+                    <IconButton className='header-left-button' onClick={this.handleCloseEditProfile}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <div className='header-status grow cursor-pointer' onClick={onClick}>
+                        <span className='header-status-content'>{t('EditProfile')}</span>
+                    </div>
+                </>
+            );
+        } else if (openNotifications) {
+            showRightButton = false;
+            content = (
+                <>
+                    <IconButton className='header-left-button' onClick={this.handleCloseNotifications}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <div className='header-status grow cursor-pointer' onClick={onClick}>
+                        <span className='header-status-content'>{t('Notifications')}</span>
+                    </div>
+                </>
+            );
+        } else if (openSettings) {
+            showRightButton = false;
+            content = (
+                <>
+                    <IconButton className='header-left-button' onClick={this.handleCloseSettings}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <div className='header-status grow cursor-pointer' onClick={onClick}>
+                        <span className='header-status-content'>{t('Settings')}</span>
+                    </div>
+                    <SettingsMenuButton />
+                </>
+            );
+        } else {
+            content = (
+                <>
+                    <MainMenuButton />
+                    <div className='header-status grow cursor-pointer' onClick={onClick}>
+                        <span className='header-status-content'>{t('AppName')}</span>
+                    </div>
+                </>
+            );
+        }
 
         return (
             <div className='header-master'>
-                {!openSearch ? (
-                    <>
-                        <MainMenuButton onLogOut={this.handleLogOut} />
-                        {confirmLogoutDialog}
-                        <div className='header-status grow cursor-pointer' onClick={onClick}>
-                            <span className='header-status-content'>{t('AppName')}</span>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className='header-search-input grow'>
-                            <div
-                                id='header-search-inputbox'
-                                ref={this.searchInputRef}
-                                placeholder={t('Search')}
-                                contentEditable
-                                suppressContentEditableWarning
-                                onKeyDown={this.handleKeyDown}
-                                onKeyUp={this.handleKeyUp}
-                                onPaste={this.handlePaste}
-                            />
-                        </div>
-                    </>
+                {content}
+                {showRightButton && (
+                    <IconButton
+                        className='header-right-button'
+                        aria-label={t('Search')}
+                        onMouseDown={this.handleSearch}>
+                        <SpeedDialIcon open={openSearch} icon={<SearchIcon />} openIcon={<CloseIcon />} />
+                    </IconButton>
                 )}
-                <IconButton
-                    className={classes.headerIconButton}
-                    aria-label={t('Search')}
-                    onMouseDown={this.handleSearch}>
-                    <SpeedDialIcon open={openSearch} icon={<SearchIcon />} openIcon={<CloseIcon />} />
-                </IconButton>
             </div>
         );
     }
@@ -208,6 +245,8 @@ class DialogsHeader extends React.Component {
 
 DialogsHeader.propTypes = {
     openSearch: PropTypes.bool.isRequired,
+    openArchive: PropTypes.bool.isRequired,
+    openSettings: PropTypes.bool.isRequired,
     onClick: PropTypes.func.isRequired,
     onSearch: PropTypes.func.isRequired,
     onSearchTextChange: PropTypes.func.isRequired
@@ -216,7 +255,6 @@ DialogsHeader.propTypes = {
 const enhance = compose(
     withSaveRef(),
     withTranslation(),
-    withStyles(styles),
     withRestoreRef()
 );
 

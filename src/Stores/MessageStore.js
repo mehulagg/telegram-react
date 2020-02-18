@@ -162,6 +162,10 @@ class MessageStore extends EventEmitter {
                 this.emit('clientUpdateClearSelection', update);
                 break;
             }
+            case 'clientUpdateMessageShake': {
+                this.emit('clientUpdateMessageShake', update);
+                break;
+            }
             case 'clientUpdateMessageHighlighted': {
                 this.emit('clientUpdateMessageHighlighted', update);
                 break;
@@ -251,6 +255,8 @@ class MessageStore extends EventEmitter {
     }
 
     set(message) {
+        if (!message) return;
+
         let chat = this.items.get(message.chat_id);
         if (!chat) {
             chat = new Map();

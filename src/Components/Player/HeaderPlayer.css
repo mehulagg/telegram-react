@@ -11,14 +11,18 @@
     align-items: center;
     /*overflow: hidden;*/
     box-sizing: border-box;
-    border-bottom-width: 1px;
-    border-bottom-style: solid;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-background);
     padding: 0 12px;
 
     /*position: absolute;*/
     /*left: 0;*/
     /*right: 0;*/
     /*top: 65px;*/
+}
+
+.header-player-button {
+    padding: 4px;
 }
 
 .header-player-video {

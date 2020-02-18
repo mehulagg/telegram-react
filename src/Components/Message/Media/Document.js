@@ -7,8 +7,9 @@
 
 import React from 'react';
 import PropTypes from 'prop-types';
-import InsertDriveFileIcon from '@material-ui/icons/InsertDriveFile';
-import ArrowDownwardIcon from '@material-ui/icons/ArrowDownward';
+import classNames from 'classnames';
+import DownloadIcon from '../../../Assets/Icons/Download';
+import DocumentIcon from '../../../Assets/Icons/Document';
 import DocumentTile from '../../Tile/DocumentTile';
 import DocumentAction from './DocumentAction';
 import { getExtension } from '../../../Utils/File';
@@ -16,23 +17,30 @@ import './Document.css';
 
 class Document extends React.Component {
     render() {
-        const { document, openMedia, width, height } = this.props;
+        const { document, openMedia, width, height, meta, title, caption } = this.props;
         if (!document) return null;
 
         const { minithumbnail, thumbnail, file_name } = document;
         const file = document.document;
 
         const style = width && height ? { width, height } : null;
+        const completeIconFunc = thumb =>
+            thumb ? null : (
+                <div className='document-tile-complete-icon'>
+                    <DocumentIcon className='document-tile-icon-fill' viewBox='0 0 54 54' />
+                    <div className='document-tile-file-ext'>{getExtension(file_name)}</div>
+                </div>
+            );
 
         return (
-            <div className='document' style={style}>
+            <div className={classNames('document', { 'media-title': title })} style={style}>
                 <DocumentTile
                     minithumbnail={minithumbnail}
                     thumbnail={thumbnail}
                     file={file}
                     openMedia={openMedia}
-                    icon={<ArrowDownwardIcon />}
-                    completeIcon={<InsertDriveFileIcon />}
+                    icon={<DownloadIcon />}
+                    completeIcon={completeIconFunc}
                 />
                 <div className='document-content'>
                     <div className='document-title'>
@@ -45,7 +53,7 @@ class Document extends React.Component {
                             {file_name}
                         </a>
                     </div>
-                    <DocumentAction file={file} />
+                    <DocumentAction file={file} meta={caption ? null : meta} />
                 </div>
             </div>
         );

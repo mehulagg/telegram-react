@@ -7,21 +7,11 @@
 
 import React from 'react';
 import * as ReactDOM from 'react-dom';
-import classNames from 'classnames';
 import { getMedia, openMedia } from '../../Utils/Message';
-import { borderStyle } from '../Theme';
-import withStyles from '@material-ui/core/styles/withStyles';
 import { SCROLL_PRECISION } from '../../Constants';
 import PlayerStore from '../../Stores/PlayerStore';
 import TdLibController from '../../Controllers/TdLibController';
 import './Playlist.css';
-
-const styles = theme => ({
-    root: {
-        background: theme.palette.type === 'dark' ? theme.palette.background.default : '#FFFFFF'
-    },
-    ...borderStyle(theme)
-});
 
 class Playlist extends React.Component {
     constructor(props) {
@@ -203,7 +193,7 @@ class Playlist extends React.Component {
 
         return (
             <div className='playlist'>
-                <div className={classNames('playlist-wrapper', classes.root, classes.borderColor)}>
+                <div className='playlist-wrapper'>
                     <div
                         ref={this.listRef}
                         className='playlist-items'
@@ -225,4 +215,4 @@ class Playlist extends React.Component {
     }
 }
 
-export default withStyles(styles)(Playlist);
+export default Playlist;

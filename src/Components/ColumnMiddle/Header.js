@@ -7,6 +7,7 @@
 
 import React, { Component } from 'react';
 import classNames from 'classnames';
+import { withTranslation } from 'react-i18next';
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import Dialog from '@material-ui/core/Dialog';
@@ -17,13 +18,11 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import IconButton from '@material-ui/core/IconButton';
 import SearchIcon from '@material-ui/icons/Search';
-import withStyles from '@material-ui/core/styles/withStyles';
-import { withTranslation } from 'react-i18next';
-import { compose } from 'recompose';
 import MainMenuButton from './MainMenuButton';
+import HeaderChat from '../Tile/HeaderChat';
 import HeaderCommand from './HeaderCommand';
 import HeaderProgress from './HeaderProgress';
-import { borderStyle } from '../Theme';
+import PinnedMessage from './PinnedMessage';
 import {
     getChatShortTitle,
     getChatSubtitle,
@@ -32,39 +31,11 @@ import {
     isPrivateChat
 } from '../../Utils/Chat';
 import { clearSelection, searchChat } from '../../Actions/Client';
-import ChatStore from '../../Stores/ChatStore';
-import UserStore from '../../Stores/UserStore';
-import BasicGroupStore from '../../Stores/BasicGroupStore';
-import SupergroupStore from '../../Stores/SupergroupStore';
-import MessageStore from '../../Stores/MessageStore';
 import AppStore from '../../Stores/ApplicationStore';
+import ChatStore from '../../Stores/ChatStore';
+import MessageStore from '../../Stores/MessageStore';
 import TdLibController from '../../Controllers/TdLibController';
 import './Header.css';
-
-const styles = theme => ({
-    button: {
-        margin: '14px'
-    },
-    menuIconButton: {
-        margin: '8px -2px 8px 12px'
-    },
-    searchIconButton: {
-        margin: '8px 12px 8px 0'
-    },
-    messageSearchIconButton: {
-        margin: '8px 0 8px 12px'
-    },
-    moreIconButton: {
-        margin: '8px 12px 8px 0'
-    },
-    headerStatusTitle: {
-        color: theme.palette.text.secondary
-    },
-    headerStatusAccentTitle: {
-        color: theme.palette.primary.dark + '!important'
-    },
-    ...borderStyle(theme)
-});
 
 class Header extends Component {
     constructor(props) {
@@ -94,43 +65,23 @@ class Header extends Component {
     }
 
     componentDidMount() {
-        AppStore.on('clientUpdateDeleteMessages', this.onClientUpdateDeleteMessages);
-        AppStore.on('updateConnectionState', this.onUpdateConnectionState);
-        AppStore.on('updateAuthorizationState', this.onUpdateAuthorizationState);
         AppStore.on('clientUpdateChatId', this.onClientUpdateChatId);
+        AppStore.on('clientUpdateDeleteMessages', this.onClientUpdateDeleteMessages);
+        AppStore.on('updateAuthorizationState', this.onUpdateAuthorizationState);
+        AppStore.on('updateConnectionState', this.onUpdateConnectionState);
 
-        MessageStore.on('clientUpdateMessageSelected', this.onClientUpdateMessageSelected);
         MessageStore.on('clientUpdateClearSelection', this.onClientUpdateMessageSelected);
-
-        ChatStore.on('updateChatOnlineMemberCount', this.onUpdateChatOnlineMemberCount);
-        ChatStore.on('updateChatTitle', this.onUpdateChatTitle);
-        UserStore.on('updateUserStatus', this.onUpdateUserStatus);
-        ChatStore.on('updateUserChatAction', this.onUpdateUserChatAction);
-        UserStore.on('updateUserFullInfo', this.onUpdateUserFullInfo);
-        BasicGroupStore.on('updateBasicGroupFullInfo', this.onUpdateBasicGroupFullInfo);
-        SupergroupStore.on('updateSupergroupFullInfo', this.onUpdateSupergroupFullInfo);
-        BasicGroupStore.on('updateBasicGroup', this.onUpdateBasicGroup);
-        SupergroupStore.on('updateSupergroup', this.onUpdateSupergroup);
+        MessageStore.on('clientUpdateMessageSelected', this.onClientUpdateMessageSelected);
     }
 
     componentWillUnmount() {
-        AppStore.off('clientUpdateDeleteMessages', this.onClientUpdateDeleteMessages);
-        AppStore.off('updateConnectionState', this.onUpdateConnectionState);
-        AppStore.off('updateAuthorizationState', this.onUpdateAuthorizationState);
         AppStore.off('clientUpdateChatId', this.onClientUpdateChatId);
+        AppStore.off('clientUpdateDeleteMessages', this.onClientUpdateDeleteMessages);
+        AppStore.off('updateAuthorizationState', this.onUpdateAuthorizationState);
+        AppStore.off('updateConnectionState', this.onUpdateConnectionState);
 
-        MessageStore.off('clientUpdateMessageSelected', this.onClientUpdateMessageSelected);
         MessageStore.off('clientUpdateClearSelection', this.onClientUpdateMessageSelected);
-
-        ChatStore.off('updateChatOnlineMemberCount', this.onUpdateChatOnlineMemberCount);
-        ChatStore.off('updateChatTitle', this.onUpdateChatTitle);
-        UserStore.off('updateUserStatus', this.onUpdateUserStatus);
-        ChatStore.off('updateUserChatAction', this.onUpdateUserChatAction);
-        UserStore.off('updateUserFullInfo', this.onUpdateUserFullInfo);
-        BasicGroupStore.off('updateBasicGroupFullInfo', this.onUpdateBasicGroupFullInfo);
-        SupergroupStore.off('updateSupergroupFullInfo', this.onUpdateSupergroupFullInfo);
-        BasicGroupStore.off('updateBasicGroup', this.onUpdateBasicGroup);
-        SupergroupStore.off('updateSupergroup', this.onUpdateSupergroup);
+        MessageStore.off('clientUpdateMessageSelected', this.onClientUpdateMessageSelected);
     }
 
     onClientUpdateDeleteMessages = update => {
@@ -180,14 +131,6 @@ class Header extends Component {
         });
     };
 
-    onUpdateChatOnlineMemberCount = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-        if (chat.id !== update.chat_id) return;
-
-        this.forceUpdate();
-    };
-
     onClientUpdateMessageSelected = update => {
         this.setState({ selectionCount: MessageStore.selectedItems.size });
     };
@@ -202,121 +145,6 @@ class Header extends Component {
 
     onUpdateAuthorizationState = update => {
         this.setState({ authorizationState: update.authorization_state });
-    };
-
-    onUpdateChatTitle = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-        if (chat.id !== update.chat_id) return;
-
-        this.forceUpdate();
-    };
-
-    onUpdateUserStatus = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-        if (!chat.type) return;
-
-        switch (chat.type['@type']) {
-            case 'chatTypeBasicGroup': {
-                const fullInfo = BasicGroupStore.getFullInfo(chat.type.basic_group_id);
-                if (fullInfo && fullInfo.members) {
-                    const member = fullInfo.members.find(x => x.user_id === update.user_id);
-                    if (member) {
-                        this.forceUpdate();
-                    }
-                }
-                break;
-            }
-            case 'chatTypePrivate': {
-                if (chat.type.user_id === update.user_id) {
-                    this.forceUpdate();
-                }
-                break;
-            }
-            case 'chatTypeSecret': {
-                if (chat.type.user_id === update.user_id) {
-                    this.forceUpdate();
-                }
-                break;
-            }
-            case 'chatTypeSupergroup': {
-                break;
-            }
-        }
-    };
-
-    onUpdateUserChatAction = update => {
-        const currentChatId = AppStore.getChatId();
-
-        if (currentChatId === update.chat_id) {
-            this.forceUpdate();
-        }
-    };
-
-    onUpdateBasicGroup = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-
-        if (
-            chat.type &&
-            chat.type['@type'] === 'chatTypeBasicGroup' &&
-            chat.type.basic_group_id === update.basic_group.id
-        ) {
-            this.forceUpdate();
-        }
-    };
-
-    onUpdateSupergroup = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-
-        if (
-            chat.type &&
-            chat.type['@type'] === 'chatTypeSupergroup' &&
-            chat.type.supergroup_id === update.supergroup.id
-        ) {
-            this.forceUpdate();
-        }
-    };
-
-    onUpdateBasicGroupFullInfo = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-
-        if (
-            chat.type &&
-            chat.type['@type'] === 'chatTypeBasicGroup' &&
-            chat.type.basic_group_id === update.basic_group_id
-        ) {
-            this.forceUpdate();
-        }
-    };
-
-    onUpdateSupergroupFullInfo = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-
-        if (
-            chat.type &&
-            chat.type['@type'] === 'chatTypeSupergroup' &&
-            chat.type.supergroup_id === update.supergroup_id
-        ) {
-            this.forceUpdate();
-        }
-    };
-
-    onUpdateUserFullInfo = update => {
-        const chat = ChatStore.get(AppStore.getChatId());
-        if (!chat) return;
-
-        if (
-            chat.type &&
-            (chat.type['@type'] === 'chatTypePrivate' || chat.type['@type'] === 'chatTypeSecret') &&
-            chat.type.user_id === update.user_id
-        ) {
-            this.forceUpdate();
-        }
     };
 
     openChatDetails = () => {
@@ -344,7 +172,7 @@ class Header extends Component {
     };
 
     render() {
-        const { classes, t } = this.props;
+        const { t } = this.props;
         const {
             authorizationState,
             connectionState,
@@ -432,24 +260,31 @@ class Header extends Component {
         }
 
         control = control || (
-            <div className={classNames(classes.borderColor, 'header-details')}>
-                <div
-                    className={classNames('header-status', 'grow', chat ? 'cursor-pointer' : 'cursor-default')}
-                    onClick={this.openChatDetails}>
-                    <span className='header-status-content'>{title}</span>
-                    {showProgressAnimation && <HeaderProgress />}
-                    <span
-                        className={classNames('header-status-title', classes.headerStatusTitle, {
-                            [classes.headerStatusAccentTitle]: isAccentSubtitle
-                        })}>
-                        {subtitle}
-                    </span>
-                    <span className='header-status-tail' />
-                </div>
+            <div className='header-details'>
+                {showProgressAnimation ? (
+                    <div
+                        className={classNames('header-status', 'grow', chat ? 'cursor-pointer' : 'cursor-default')}
+                        onClick={this.openChatDetails}>
+                        <span className='header-status-content'>{title}</span>
+                        <HeaderProgress />
+                        <span
+                            className={classNames('header-status-title', { 'header-status-accent': isAccentSubtitle })}>
+                            {subtitle}
+                        </span>
+                        <span className='header-status-tail' />
+                    </div>
+                ) : (
+                    <HeaderChat
+                        className={classNames('grow', 'cursor-pointer')}
+                        chatId={chatId}
+                        onClick={this.openChatDetails}
+                    />
+                )}
+                <PinnedMessage chatId={chatId} />
                 {chat && (
                     <>
                         <IconButton
-                            className={classes.messageSearchIconButton}
+                            className='header-right-second-button'
                             aria-label='Search'
                             onClick={this.handleSearchChat}>
                             <SearchIcon />
@@ -481,7 +316,9 @@ class Header extends Component {
                                     <Checkbox checked={revoke} onChange={this.handleRevokeChange} color='primary' />
                                 }
                                 label={
-                                    isPrivateChat(chatId) ? `Delete for ${getChatShortTitle(chatId)}` : 'Delete for all'
+                                    isPrivateChat(chatId)
+                                        ? `Delete for ${getChatShortTitle(chatId, false, t)}`
+                                        : 'Delete for all'
                                 }
                             />
                         )}
@@ -500,9 +337,4 @@ class Header extends Component {
     }
 }
 
-const enhance = compose(
-    withTranslation(),
-    withStyles(styles, { withTheme: true })
-);
-
-export default enhance(Header);
+export default withTranslation()(Header);
