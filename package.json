@@ -19,7 +19,7 @@
     "iframe-resizer": "^4.2.9",
     "libphonenumber-js": "^1.7.13",
     "lottie-web": "^5.5.10",
-    "notistack": "^0.5.1",
+    "notistack": "^0.9.17",
     "pako": "^1.0.10",
     "react": "^16.12.0",
     "react-custom-scrollbars": "^4.2.1",
